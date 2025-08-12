@@ -36,17 +36,22 @@ public class YouTubeController {
     @PostMapping("/download")
     public ResponseEntity<String> downloadVideo(@RequestBody DownloadRequest request) {
         try {
-            log.info("⬇️ Starting download for URL: {} in quality: {}",
-                    request.getUrl(), request.getQuality());
+            String downloadType = request.getDownloadType() != null ? request.getDownloadType() : "video";
 
-            // Get the download path from the frontend request
-            String customPath = request.getDownloadPath(); // This will come from your frontend
-
-            // Call service with all 3 parameters
-            String result = youTubeService.downloadVideo(request.getUrl(), request.getQuality(), customPath);
-
-            log.info("✅ Download completed successfully");
-            return ResponseEntity.ok(result);
+            switch (downloadType.toLowerCase()) {
+                case "video+subtitles":
+                    return downloadVideoWithSubtitles(request);
+                case "audio+subtitles":
+                    return downloadAudioWithSubtitles(request);
+                case "subtitles":
+                    return downloadOnlySubtitles(request);
+                case "audio":
+                    return downloadOnlyAudio(request);
+                case "video":
+                default:
+                    String result = youTubeService.downloadVideo(request.getUrl(), request.getQuality(), request.getDownloadPath());
+                    return ResponseEntity.ok(result);
+            }
         } catch (Exception e) {
             log.error("❌ Download failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body("Download failed: " + e.getMessage());
@@ -86,6 +91,84 @@ public class YouTubeController {
             return ResponseEntity.badRequest().body("Subtitle download failed: " + e.getMessage());
         }
     }
+    // Add these new methods to your YouTubeController.java
+
+    @PostMapping("/download-video-with-subtitles")
+    public ResponseEntity<String> downloadVideoWithSubtitles(@RequestBody DownloadRequest request) {
+        try {
+            log.info("⬇️ Starting video + subtitles download for URL: {}", request.getUrl());
+
+            String result = youTubeService.downloadVideoWithSubtitles(
+                    request.getUrl(),
+                    request.getQuality(),
+                    request.getSubtitleLanguages(),
+                    request.getDownloadPath()
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("❌ Video + subtitles download failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Download failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/download-audio-with-subtitles")
+    public ResponseEntity<String> downloadAudioWithSubtitles(@RequestBody DownloadRequest request) {
+        try {
+            log.info("⬇️ Starting audio + subtitles download for URL: {}", request.getUrl());
+
+            String result = youTubeService.downloadAudioWithSubtitles(
+                    request.getUrl(),
+                    request.getAudioFormat(),
+                    request.getSubtitleLanguages(),
+                    request.getDownloadPath()
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("❌ Audio + subtitles download failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Download failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/download-only-subtitles")
+    public ResponseEntity<String> downloadOnlySubtitles(@RequestBody DownloadRequest request) {
+        try {
+            log.info("⬇️ Starting subtitles-only download for URL: {}", request.getUrl());
+
+            String result = youTubeService.downloadOnlySubtitles(
+                    request.getUrl(),
+                    request.getSubtitleLanguages(),
+                    request.getSubtitleFormats(),
+                    request.getDownloadPath()
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("❌ Subtitles download failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Download failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/download-only-audio")
+    public ResponseEntity<String> downloadOnlyAudio(@RequestBody DownloadRequest request) {
+        try {
+            log.info("⬇️ Starting audio-only download for URL: {}", request.getUrl());
+
+            String result = youTubeService.downloadOnlyAudio(
+                    request.getUrl(),
+                    request.getAudioFormat(),
+                    request.getDownloadPath()
+            );
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("❌ Audio download failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Download failed: " + e.getMessage());
+        }
+    }
+
+
 
     @GetMapping("/detect-browser")
     public ResponseEntity<String> detectBrowser() {

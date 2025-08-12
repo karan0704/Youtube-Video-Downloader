@@ -5,7 +5,7 @@ let downloadCount = 0;
 let isMenuVisible = false;
 
 // Wait for DOM to load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('✅ YouTube Downloader Pro initialized!');
     setupEventListeners();
     detectBrowser();
@@ -26,6 +26,256 @@ function setupEventListeners() {
     if (urlInput) {
         urlInput.addEventListener('input', handleUrlInput);
     }
+}
+
+// Add these new functions to your script.js
+
+let selectedSubtitleLanguages = [];
+let selectedSubtitleFormats = ['srt'];
+let downloadType = 'video'; // Default
+
+// Enhanced download functions
+function downloadVideoWithSubtitles(quality) {
+    if (!currentUrl) {
+        showNotification('No video URL available', 'error');
+        return;
+    }
+
+    if (selectedSubtitleLanguages.length === 0) {
+        showNotification('Please select at least one subtitle language', 'warning');
+        return;
+    }
+
+    showNotification(`Starting video + subtitles download...`, 'info');
+    showProgressSection();
+    simulateProgress();
+
+    const downloadRequest = {
+        url: currentUrl,
+        quality: quality,
+        downloadPath: document.getElementById('downloadPath')?.value || '',
+        browserType: document.getElementById('browserChoice')?.value || 'chrome',
+        downloadType: 'video+subtitles',
+        subtitleLanguages: selectedSubtitleLanguages
+    };
+
+    fetch('/api/youtube/download-video-with-subtitles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(downloadRequest)
+    })
+        .then(handleDownloadResponse)
+        .catch(handleDownloadError);
+}
+
+function downloadAudioWithSubtitles(format) {
+    if (!currentUrl) {
+        showNotification('No video URL available', 'error');
+        return;
+    }
+
+    if (selectedSubtitleLanguages.length === 0) {
+        showNotification('Please select at least one subtitle language', 'warning');
+        return;
+    }
+
+    showNotification(`Starting audio + subtitles download...`, 'info');
+    showProgressSection();
+    simulateProgress();
+
+    const downloadRequest = {
+        url: currentUrl,
+        audioFormat: format,
+        downloadPath: document.getElementById('downloadPath')?.value || '',
+        downloadType: 'audio+subtitles',
+        subtitleLanguages: selectedSubtitleLanguages
+    };
+
+    fetch('/api/youtube/download-audio-with-subtitles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(downloadRequest)
+    })
+        .then(handleDownloadResponse)
+        .catch(handleDownloadError);
+}
+
+function downloadOnlySubtitles() {
+    if (!currentUrl) {
+        showNotification('No video URL available', 'error');
+        return;
+    }
+
+    if (selectedSubtitleLanguages.length === 0) {
+        showNotification('Please select at least one subtitle language', 'warning');
+        return;
+    }
+
+    showNotification(`Starting subtitles download...`, 'info');
+    showProgressSection();
+    simulateProgress();
+
+    const downloadRequest = {
+        url: currentUrl,
+        downloadPath: document.getElementById('downloadPath')?.value || '',
+        downloadType: 'subtitles',
+        subtitleLanguages: selectedSubtitleLanguages,
+        subtitleFormats: selectedSubtitleFormats
+    };
+
+    fetch('/api/youtube/download-only-subtitles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(downloadRequest)
+    })
+        .then(handleDownloadResponse)
+        .catch(handleDownloadError);
+}
+
+function downloadOnlyAudio(format) {
+    if (!currentUrl) {
+        showNotification('No video URL available', 'error');
+        return;
+    }
+
+    showNotification(`Starting audio download...`, 'info');
+    showProgressSection();
+    simulateProgress();
+
+    const downloadRequest = {
+        url: currentUrl,
+        audioFormat: format,
+        downloadPath: document.getElementById('downloadPath')?.value || '',
+        downloadType: 'audio'
+    };
+
+    fetch('/api/youtube/download-only-audio', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(downloadRequest)
+    })
+        .then(handleDownloadResponse)
+        .catch(handleDownloadError);
+}
+
+// Helper functions for handling responses
+function handleDownloadResponse(response) {
+    if (!response.ok) {
+        return response.text().then(text => {
+            throw new Error(text || 'Download failed');
+        });
+    }
+    return response.text();
+}
+
+function handleDownloadError(error) {
+    console.error('❌ Download failed:', error);
+    showNotification('❌ Download failed: ' + error.message, 'error');
+    hideProgressSection();
+}
+
+// Subtitle language selection
+function toggleSubtitleLanguage(languageCode) {
+    const index = selectedSubtitleLanguages.indexOf(languageCode);
+    if (index > -1) {
+        selectedSubtitleLanguages.splice(index, 1);
+    } else {
+        selectedSubtitleLanguages.push(languageCode);
+    }
+
+    updateSubtitleSelectionUI();
+    showNotification(`Selected ${selectedSubtitleLanguages.length} subtitle languages`, 'info');
+}
+
+function updateSubtitleSelectionUI() {
+    document.querySelectorAll('.subtitle-option').forEach(option => {
+        const languageCode = option.dataset.language;
+        if (selectedSubtitleLanguages.includes(languageCode)) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+}
+
+// Enhanced display subtitles with selection
+function displaySubtitles(subtitles) {
+    const subtitleOptions = document.getElementById('subtitleOptions');
+    if (!subtitleOptions) return;
+
+    if (!subtitles || subtitles.length === 0) {
+        subtitleOptions.innerHTML = `
+            <div class="no-subtitles">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>No subtitles available for this video</p>
+            </div>
+        `;
+        return;
+    }
+
+    subtitleOptions.innerHTML = `
+        <div class="subtitle-controls">
+            <h4><i class="fas fa-check-square"></i> Select Subtitle Languages:</h4>
+            <div class="subtitle-actions">
+                <button class="btn-select-all" onclick="selectAllSubtitles()">
+                    <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button class="btn-clear-all" onclick="clearAllSubtitles()">
+                    <i class="fas fa-times"></i> Clear All
+                </button>
+                <button class="btn-download-subs" onclick="downloadOnlySubtitles()">
+                    <i class="fas fa-download"></i> Download Selected
+                </button>
+            </div>
+        </div>
+        <div class="subtitle-grid"></div>
+    `;
+
+    const subtitleGrid = subtitleOptions.querySelector('.subtitle-grid');
+
+    subtitles.forEach(subtitle => {
+        const option = document.createElement('div');
+        option.className = 'subtitle-option';
+        option.dataset.language = subtitle.languageCode;
+        option.onclick = () => toggleSubtitleLanguage(subtitle.languageCode);
+
+        const autoGenText = subtitle.autoGenerated ? ' (Auto-generated)' : '';
+
+        option.innerHTML = `
+            <div class="subtitle-info">
+                <i class="fas fa-closed-captioning"></i>
+                <div class="subtitle-details">
+                    <h4>${subtitle.language}${autoGenText}</h4>
+                    <p>${subtitle.languageCode} • ${subtitle.format.toUpperCase()}</p>
+                </div>
+                <div class="subtitle-checkbox">
+                    <i class="fas fa-check"></i>
+                </div>
+            </div>
+        `;
+
+        subtitleGrid.appendChild(option);
+    });
+}
+
+// Subtitle selection helpers
+function selectAllSubtitles() {
+    const subtitleOptions = document.querySelectorAll('.subtitle-option');
+    selectedSubtitleLanguages = [];
+
+    subtitleOptions.forEach(option => {
+        const languageCode = option.dataset.language;
+        selectedSubtitleLanguages.push(languageCode);
+    });
+
+    updateSubtitleSelectionUI();
+    showNotification(`Selected all ${selectedSubtitleLanguages.length} subtitle languages`, 'success');
+}
+
+function clearAllSubtitles() {
+    selectedSubtitleLanguages = [];
+    updateSubtitleSelectionUI();
+    showNotification('Cleared all subtitle selections', 'info');
 }
 
 // ✅ This function now has proper null check
@@ -137,7 +387,7 @@ function displayVideoInfo(videoInfo) {
     showSection('optionsSection');
 
     // Scroll to video info
-    videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    videoSection.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 function displayQualityOptions(qualities) {
@@ -147,16 +397,16 @@ function displayQualityOptions(qualities) {
     qualityGrid.innerHTML = '';
 
     const qualityInfo = {
-        '1080p': { label: 'Full HD', icon: 'fas fa-crown', desc: '1920×1080' },
-        '720p': { label: 'HD', icon: 'fas fa-video', desc: '1280×720' },
-        '480p': { label: 'SD', icon: 'fas fa-play', desc: '854×480' },
-        '360p': { label: 'Low Quality', icon: 'fas fa-compress', desc: '640×360' },
-        'best': { label: 'Best Available', icon: 'fas fa-star', desc: 'Highest Quality' },
-        'worst': { label: 'Smallest Size', icon: 'fas fa-download', desc: 'Lowest Size' }
+        '1080p': {label: 'Full HD', icon: 'fas fa-crown', desc: '1920×1080'},
+        '720p': {label: 'HD', icon: 'fas fa-video', desc: '1280×720'},
+        '480p': {label: 'SD', icon: 'fas fa-play', desc: '854×480'},
+        '360p': {label: 'Low Quality', icon: 'fas fa-compress', desc: '640×360'},
+        'best': {label: 'Best Available', icon: 'fas fa-star', desc: 'Highest Quality'},
+        'worst': {label: 'Smallest Size', icon: 'fas fa-download', desc: 'Lowest Size'}
     };
 
     qualities.forEach(quality => {
-        const info = qualityInfo[quality] || { label: 'Standard', icon: 'fas fa-video', desc: 'Quality' };
+        const info = qualityInfo[quality] || {label: 'Standard', icon: 'fas fa-video', desc: 'Quality'};
 
         const option = document.createElement('div');
         option.className = 'quality-option';
@@ -253,7 +503,7 @@ function showProgressSection() {
     const progressSection = document.getElementById('progressSection');
     if (progressSection) {
         progressSection.classList.remove('hidden');
-        progressSection.scrollIntoView({ behavior: 'smooth' });
+        progressSection.scrollIntoView({behavior: 'smooth'});
     }
 }
 
@@ -362,7 +612,7 @@ async function loadSubtitles(url) {
     try {
         const response = await fetch('/api/youtube/get-subtitles', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(url)
         });
 

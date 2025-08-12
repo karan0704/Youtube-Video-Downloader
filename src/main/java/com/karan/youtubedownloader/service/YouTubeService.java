@@ -85,6 +85,158 @@ public class YouTubeService {
 
         return videoInfos;
     }
+// Add these new methods to your YouTubeService.java
+
+    public String downloadVideoWithSubtitles(String url, String quality, List<String> subtitleLanguages, String customPath) throws Exception {
+        log.info("📥 Downloading video with subtitles in {} quality", quality);
+
+        String downloadsPath = getDownloadsPath(customPath);
+        String formatSelector = getQualityFormat(quality);
+
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("-f");
+        command.add(formatSelector);
+        command.add("-o");
+        command.add(downloadsPath + File.separator + "%(title)s.%(ext)s");
+        command.add("--merge-output-format");
+        command.add("mp4");
+        command.add("--write-subs");
+        command.add("--write-auto-subs");
+
+        // Add specific subtitle languages
+        if (subtitleLanguages != null && !subtitleLanguages.isEmpty()) {
+            command.add("--sub-langs");
+            command.add(String.join(",", subtitleLanguages));
+        }
+
+        command.add("--ignore-errors");
+        command.add("--continue");
+        command.add(url);
+
+        return executeDownloadCommand(command, "🎉 Video with subtitles downloaded successfully to " + downloadsPath + "!");
+    }
+
+    public String downloadAudioWithSubtitles(String url, String format, List<String> subtitleLanguages, String customPath) throws Exception {
+        log.info("🎵 Downloading audio with subtitles in {} format", format);
+
+        String downloadsPath = getDownloadsPath(customPath);
+
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("-f");
+        command.add("bestaudio");
+        command.add("-o");
+        command.add(downloadsPath + File.separator + "%(title)s.%(ext)s");
+        command.add("--extract-audio");
+        command.add("--audio-format");
+        command.add(format); // mp3, m4a, etc.
+        command.add("--write-subs");
+        command.add("--write-auto-subs");
+
+        // Add specific subtitle languages
+        if (subtitleLanguages != null && !subtitleLanguages.isEmpty()) {
+            command.add("--sub-langs");
+            command.add(String.join(",", subtitleLanguages));
+        }
+
+        command.add("--ignore-errors");
+        command.add("--continue");
+        command.add(url);
+
+        return executeDownloadCommand(command, "🎉 Audio with subtitles downloaded successfully to " + downloadsPath + "!");
+    }
+
+    public String downloadOnlySubtitles(String url, List<String> subtitleLanguages, List<String> formats, String customPath) throws Exception {
+        log.info("📝 Downloading only subtitles");
+
+        String downloadsPath = getDownloadsPath(customPath);
+
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("--skip-download");
+        command.add("--write-subs");
+        command.add("--write-auto-subs");
+        command.add("--sub-format");
+        command.add(String.join("/", formats)); // srt/vtt/ass
+        command.add("-o");
+        command.add(downloadsPath + File.separator + "%(title)s");
+
+        // Add specific subtitle languages
+        if (subtitleLanguages != null && !subtitleLanguages.isEmpty()) {
+            command.add("--sub-langs");
+            command.add(String.join(",", subtitleLanguages));
+        }
+
+        command.add("--ignore-errors");
+        command.add(url);
+
+        return executeDownloadCommand(command, "🎉 Subtitles downloaded successfully to " + downloadsPath + "!");
+    }
+
+    public String downloadOnlyAudio(String url, String format, String customPath) throws Exception {
+        log.info("🎵 Downloading only audio in {} format", format);
+
+        String downloadsPath = getDownloadsPath(customPath);
+
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("-f");
+        command.add("bestaudio");
+        command.add("-o");
+        command.add(downloadsPath + File.separator + "%(title)s.%(ext)s");
+        command.add("--extract-audio");
+        command.add("--audio-format");
+        command.add(format);
+        command.add("--ignore-errors");
+        command.add("--continue");
+        command.add(url);
+
+        return executeDownloadCommand(command, "🎉 Audio downloaded successfully to " + downloadsPath + "!");
+    }
+
+    // Helper methods
+    private String getDownloadsPath(String customPath) {
+        if (customPath != null && !customPath.trim().isEmpty()) {
+            return customPath.trim();
+        } else {
+            String userHome = System.getProperty("user.home");
+            return userHome + File.separator + "Downloads" + File.separator + "YouTubeDownloader";
+        }
+    }
+
+    private String executeDownloadCommand(List<String> command, String successMessage) throws Exception {
+        log.info("🔧 Command: {}", String.join(" ", command));
+
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        Process process = processBuilder.start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+        StringBuilder output = new StringBuilder();
+        StringBuilder errorOutput = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            log.info("yt-dlp: {}", line);
+            output.append(line).append("\n");
+        }
+
+        while ((line = errorReader.readLine()) != null) {
+            log.warn("yt-dlp error: {}", line);
+            errorOutput.append(line).append("\n");
+        }
+
+        int exitCode = process.waitFor();
+
+        if (exitCode == 0) {
+            return successMessage;
+        } else {
+            String errorMessage = errorOutput.toString().trim();
+            throw new RuntimeException("Download failed: " + errorMessage);
+        }
+    }
 
     public String downloadVideo(String url, String quality, String customPath) throws Exception {
         log.info("📥 Downloading video in {} quality", quality);
