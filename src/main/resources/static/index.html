@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Downloader Pro</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -21,16 +21,15 @@
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </a>
-            <a href="#playlists" class="nav-item">
-                <i class="fas fa-list-ul"></i>
-                <span>Playlists</span>
+            <a href="#downloads" class="nav-item">
+                <i class="fas fa-download"></i>
+                <span>Downloads</span>
             </a>
             <a href="#settings" class="nav-item">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
             </a>
         </div>
-        <!-- Menu Toggle Button -->
         <button class="menu-toggle" id="menuToggle">
             <i class="fas fa-chevron-up"></i>
         </button>
@@ -39,7 +38,7 @@
 
 <div class="main-layout">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-section">
             <h3><i class="fas fa-download"></i> Quick Actions</h3>
             <button class="sidebar-btn" onclick="clearAll()">
@@ -47,6 +46,9 @@
             </button>
             <button class="sidebar-btn" onclick="openSettings()">
                 <i class="fas fa-cog"></i> Settings
+            </button>
+            <button class="sidebar-btn" onclick="toggleTheme()">
+                <i class="fas fa-moon"></i> Dark Mode
             </button>
         </div>
 
@@ -67,7 +69,7 @@
                 <h2><i class="fas fa-link"></i> Enter YouTube URL</h2>
                 <div class="input-group">
                     <textarea id="urlInput" placeholder="Paste YouTube URL here..."></textarea>
-                    <button class="btn-primary" onclick="analyzeVideo()">
+                    <button class="btn-primary" onclick="analyzeVideo()" id="analyzeBtn">
                         <i class="fas fa-search"></i> Analyze
                     </button>
                 </div>
@@ -85,8 +87,22 @@
             </div>
         </section>
 
+        <!-- Progress Section -->
+        <section class="progress-section hidden" id="progressSection">
+            <div class="progress-card">
+                <h3><i class="fas fa-download"></i> Download Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="progressText">0%</span>
+                    <span id="progressStatus">Ready</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Download Options -->
-        <section class="options-section hidden" id="optionsSection" style="display: none;">
+        <section class="options-section hidden" id="optionsSection">
             <div class="option-tabs">
                 <button class="tab-btn active" data-tab="video">
                     <i class="fas fa-video"></i> Video
@@ -97,25 +113,36 @@
                 <button class="tab-btn" data-tab="subtitles">
                     <i class="fas fa-closed-captioning"></i> Subtitles
                 </button>
+                <button class="tab-btn" data-tab="advanced">
+                    <i class="fas fa-cogs"></i> Advanced
+                </button>
             </div>
 
             <!-- Video Tab -->
             <div class="tab-content active" id="video-tab">
-                <div class="quality-grid" id="qualityGrid">
-                    <!-- Quality options will be inserted here -->
+                <div class="quality-grid" id="qualityGrid"></div>
+                <div class="download-actions">
+                    <button class="btn-download" onclick="downloadSelected()">
+                        <i class="fas fa-download"></i> Download Selected
+                    </button>
+                    <button class="btn-download-all" onclick="downloadAll()">
+                        <i class="fas fa-download"></i> Download All
+                    </button>
                 </div>
             </div>
 
             <!-- Audio Tab -->
             <div class="tab-content" id="audio-tab">
-                <div class="audio-formats">
+                <div class="format-grid">
                     <div class="format-option" data-format="mp3">
                         <i class="fas fa-music"></i>
-                        <span>MP3 (320kbps)</span>
+                        <h4>MP3</h4>
+                        <p>320kbps Audio</p>
                     </div>
                     <div class="format-option" data-format="m4a">
                         <i class="fas fa-file-audio"></i>
-                        <span>M4A (Best)</span>
+                        <h4>M4A</h4>
+                        <p>Best Quality</p>
                     </div>
                 </div>
             </div>
@@ -123,25 +150,83 @@
             <!-- Subtitles Tab -->
             <div class="tab-content" id="subtitles-tab">
                 <div class="subtitle-options" id="subtitleOptions">
-                    <!-- Subtitle options will be inserted here -->
+                    <div class="subtitle-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading available subtitles...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Tab -->
+            <div class="tab-content" id="advanced-tab">
+                <div class="advanced-options">
+                    <div class="option-group">
+                        <label for="downloadPath">Download Path:</label>
+                        <div class="path-input">
+                            <input type="text" id="downloadPath" placeholder="Choose download folder...">
+                            <button class="btn-browse" onclick="browsePath()">
+                                <i class="fas fa-folder"></i> Browse
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="fileNaming">File Naming:</label>
+                        <select id="fileNaming">
+                            <option value="title">Video Title</option>
+                            <option value="id">Video ID</option>
+                            <option value="custom">Custom Format</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Video Information -->
-        <section class="video-section" id="videoSection hidden" style="display: none;">
+        <section class="video-section hidden" id="videoSection">
             <div id="videoInfo"></div>
         </section>
-
-        <!-- Loading -->
-        <div class="loading-overlay hidden" id="loadingOverlay">
-            <div class="loading-spinner"></div>
-            <p>Analyzing video...</p>
-        </div>
     </main>
 </div>
 
-<!-- Fixed Footer Info -->
+<!-- Loading Overlay -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Analyzing video...</p>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-cog"></i> Settings</h3>
+            <button class="modal-close" onclick="closeSettings()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="setting-group">
+                <label>Default Quality:</label>
+                <select id="defaultQuality">
+                    <option value="best">Best Available</option>
+                    <option value="1080p">1080p</option>
+                    <option value="720p">720p</option>
+                    <option value="480p">480p</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>Browser for Login:</label>
+                <select id="browserChoice">
+                    <option value="chrome">Chrome</option>
+                    <option value="firefox">Firefox</option>
+                    <option value="edge">Edge</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer Info -->
 <div class="footer-info">
     <div class="footer-content">
         <div class="browser-info">
@@ -154,11 +239,18 @@
         </div>
         <div class="status-indicator">
             <div class="status-dot ready"></div>
-            <span>Ready</span>
+            <span id="statusText">Ready</span>
         </div>
     </div>
 </div>
 
+<!-- Scripts
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/events.js"></script>
+<script src="js/app.js"></script>-->
+<!-- Scripts -->
 <script src="script.js"></script>
+
 </body>
 </html>

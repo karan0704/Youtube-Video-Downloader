@@ -762,7 +762,7 @@ FILE: src/main/resources/static/index.html
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Downloader Pro</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -779,16 +779,15 @@ FILE: src/main/resources/static/index.html
                 <i class="fas fa-home"></i>
                 <span>Home</span>
             </a>
-            <a href="#playlists" class="nav-item">
-                <i class="fas fa-list-ul"></i>
-                <span>Playlists</span>
+            <a href="#downloads" class="nav-item">
+                <i class="fas fa-download"></i>
+                <span>Downloads</span>
             </a>
             <a href="#settings" class="nav-item">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
             </a>
         </div>
-        <!-- Menu Toggle Button -->
         <button class="menu-toggle" id="menuToggle">
             <i class="fas fa-chevron-up"></i>
         </button>
@@ -797,7 +796,7 @@ FILE: src/main/resources/static/index.html
 
 <div class="main-layout">
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-section">
             <h3><i class="fas fa-download"></i> Quick Actions</h3>
             <button class="sidebar-btn" onclick="clearAll()">
@@ -805,6 +804,9 @@ FILE: src/main/resources/static/index.html
             </button>
             <button class="sidebar-btn" onclick="openSettings()">
                 <i class="fas fa-cog"></i> Settings
+            </button>
+            <button class="sidebar-btn" onclick="toggleTheme()">
+                <i class="fas fa-moon"></i> Dark Mode
             </button>
         </div>
 
@@ -825,7 +827,7 @@ FILE: src/main/resources/static/index.html
                 <h2><i class="fas fa-link"></i> Enter YouTube URL</h2>
                 <div class="input-group">
                     <textarea id="urlInput" placeholder="Paste YouTube URL here..."></textarea>
-                    <button class="btn-primary" onclick="analyzeVideo()">
+                    <button class="btn-primary" onclick="analyzeVideo()" id="analyzeBtn">
                         <i class="fas fa-search"></i> Analyze
                     </button>
                 </div>
@@ -843,8 +845,22 @@ FILE: src/main/resources/static/index.html
             </div>
         </section>
 
+        <!-- Progress Section -->
+        <section class="progress-section hidden" id="progressSection">
+            <div class="progress-card">
+                <h3><i class="fas fa-download"></i> Download Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="progressText">0%</span>
+                    <span id="progressStatus">Ready</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Download Options -->
-        <section class="options-section hidden" id="optionsSection" style="display: none;">
+        <section class="options-section hidden" id="optionsSection">
             <div class="option-tabs">
                 <button class="tab-btn active" data-tab="video">
                     <i class="fas fa-video"></i> Video
@@ -855,25 +871,36 @@ FILE: src/main/resources/static/index.html
                 <button class="tab-btn" data-tab="subtitles">
                     <i class="fas fa-closed-captioning"></i> Subtitles
                 </button>
+                <button class="tab-btn" data-tab="advanced">
+                    <i class="fas fa-cogs"></i> Advanced
+                </button>
             </div>
 
             <!-- Video Tab -->
             <div class="tab-content active" id="video-tab">
-                <div class="quality-grid" id="qualityGrid">
-                    <!-- Quality options will be inserted here -->
+                <div class="quality-grid" id="qualityGrid"></div>
+                <div class="download-actions">
+                    <button class="btn-download" onclick="downloadSelected()">
+                        <i class="fas fa-download"></i> Download Selected
+                    </button>
+                    <button class="btn-download-all" onclick="downloadAll()">
+                        <i class="fas fa-download"></i> Download All
+                    </button>
                 </div>
             </div>
 
             <!-- Audio Tab -->
             <div class="tab-content" id="audio-tab">
-                <div class="audio-formats">
+                <div class="format-grid">
                     <div class="format-option" data-format="mp3">
                         <i class="fas fa-music"></i>
-                        <span>MP3 (320kbps)</span>
+                        <h4>MP3</h4>
+                        <p>320kbps Audio</p>
                     </div>
                     <div class="format-option" data-format="m4a">
                         <i class="fas fa-file-audio"></i>
-                        <span>M4A (Best)</span>
+                        <h4>M4A</h4>
+                        <p>Best Quality</p>
                     </div>
                 </div>
             </div>
@@ -881,25 +908,83 @@ FILE: src/main/resources/static/index.html
             <!-- Subtitles Tab -->
             <div class="tab-content" id="subtitles-tab">
                 <div class="subtitle-options" id="subtitleOptions">
-                    <!-- Subtitle options will be inserted here -->
+                    <div class="subtitle-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading available subtitles...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Tab -->
+            <div class="tab-content" id="advanced-tab">
+                <div class="advanced-options">
+                    <div class="option-group">
+                        <label for="downloadPath">Download Path:</label>
+                        <div class="path-input">
+                            <input type="text" id="downloadPath" placeholder="Choose download folder...">
+                            <button class="btn-browse" onclick="browsePath()">
+                                <i class="fas fa-folder"></i> Browse
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="fileNaming">File Naming:</label>
+                        <select id="fileNaming">
+                            <option value="title">Video Title</option>
+                            <option value="id">Video ID</option>
+                            <option value="custom">Custom Format</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Video Information -->
-        <section class="video-section" id="videoSection hidden" style="display: none;">
+        <section class="video-section hidden" id="videoSection">
             <div id="videoInfo"></div>
         </section>
-
-        <!-- Loading -->
-        <div class="loading-overlay hidden" id="loadingOverlay">
-            <div class="loading-spinner"></div>
-            <p>Analyzing video...</p>
-        </div>
     </main>
 </div>
 
-<!-- Fixed Footer Info -->
+<!-- Loading Overlay -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p id="loadingText">Analyzing video...</p>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay hidden" id="settingsModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-cog"></i> Settings</h3>
+            <button class="modal-close" onclick="closeSettings()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="setting-group">
+                <label>Default Quality:</label>
+                <select id="defaultQuality">
+                    <option value="best">Best Available</option>
+                    <option value="1080p">1080p</option>
+                    <option value="720p">720p</option>
+                    <option value="480p">480p</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>Browser for Login:</label>
+                <select id="browserChoice">
+                    <option value="chrome">Chrome</option>
+                    <option value="firefox">Firefox</option>
+                    <option value="edge">Edge</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer Info -->
 <div class="footer-info">
     <div class="footer-content">
         <div class="browser-info">
@@ -912,855 +997,23 @@ FILE: src/main/resources/static/index.html
         </div>
         <div class="status-indicator">
             <div class="status-dot ready"></div>
-            <span>Ready</span>
+            <span id="statusText">Ready</span>
         </div>
     </div>
 </div>
 
-<script src="script.js"></script>
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/events.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
 ================================================================================
 
-================================================================================
-FILE: src/main/resources/static/style.css
-================================================================================
-:root {
-    --primary-color: #6366f1;
-    --primary-light: #a5b4fc;
-    --secondary-color: #f1f5f9;
-    --accent-color: #10b981;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --border-color: #e2e8f0;
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --border-radius: 12px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+[FILE NOT FOUND: src/main/resources/static/style.css]
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    color: var(--text-primary);
-    line-height: 1.6;
-    overflow-x: hidden;
-}
-
-/* Navigation */
-.navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
-    z-index: 1000;
-    transform: translateY(-100%);
-    transition: var(--transition);
-}
-
-.navbar.visible {
-    transform: translateY(0);
-}
-
-.nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0.75rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.nav-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.nav-menu {
-    display: flex;
-    gap: 2rem;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    text-decoration: none;
-    color: var(--text-secondary);
-    border-radius: 8px;
-    transition: var(--transition);
-    font-size: 0.9rem;
-}
-
-.nav-item:hover,
-.nav-item.active {
-    color: var(--primary-color);
-    background: var(--secondary-color);
-}
-
-.menu-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 6px;
-    color: var(--text-secondary);
-}
-
-/* Main Layout */
-.main-layout {
-    display: flex;
-    padding-top: 2rem;
-    min-height: 100vh;
-}
-
-.sidebar {
-    width: 280px;
-    padding: 2rem 1rem;
-    background: var(--card-bg);
-    border-right: 1px solid var(--border-color);
-    position: sticky;
-    top: 2rem;
-    height: fit-content;
-}
-
-.sidebar-section {
-    margin-bottom: 2rem;
-}
-
-.sidebar-section h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-}
-
-.sidebar-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    cursor: pointer;
-    margin-bottom: 0.5rem;
-    transition: var(--transition);
-    font-size: 0.9rem;
-}
-
-.sidebar-btn:hover {
-    background: var(--secondary-color);
-    border-color: var(--primary-color);
-}
-
-.stat-card {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-    color: white;
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    text-align: center;
-}
-
-.stat-number {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-/* Main Content */
-.main-content {
-    flex: 1;
-    padding: 2rem;
-    max-width: calc(100vw - 280px);
-}
-
-/* Input Section */
-.input-section {
-    margin-bottom: 2rem;
-}
-
-.input-card {
-    background: var(--card-bg);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-}
-
-.input-card h2 {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-    color: var(--text-primary);
-}
-
-.input-group {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-#urlInput {
-    flex: 1;
-    min-height: 80px;
-    padding: 1rem;
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    font-family: inherit;
-    font-size: 0.95rem;
-    resize: vertical;
-    transition: var(--transition);
-}
-
-#urlInput:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.btn-primary {
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    transition: var(--transition);
-    white-space: nowrap;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.url-types {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.url-type {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--secondary-color);
-    border-radius: 20px;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-/* Tabs */
-.option-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-}
-
-.tab-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--secondary-color);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 500;
-}
-
-.tab-btn.active {
-    background: var(--primary-color);
-    color: white;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Quality Grid */
-.quality-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.quality-option {
-    padding: 1.5rem;
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    text-align: center;
-    cursor: pointer;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.quality-option::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    transition: left 0.5s;
-}
-
-.quality-option:hover::before {
-    left: 100%;
-}
-
-.quality-option:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-}
-
-.quality-option.selected {
-    border-color: var(--primary-color);
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-    color: white;
-}
-
-/* Footer Info */
-.footer-info {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 12px 0 0 0;
-    padding: 1rem 1.5rem;
-    min-width: 300px;
-    z-index: 100;
-}
-
-.footer-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-}
-
-.footer-content > div {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text-secondary);
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent-color);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Loading */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(248, 250, 252, 0.9);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    backdrop-filter: blur(5px);
-}
-
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid var(--border-color);
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .main-layout {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        width: 100%;
-        position: relative;
-        top: 0;
-    }
-
-    .main-content {
-        max-width: 100%;
-        padding: 1rem;
-    }
-
-    .input-group {
-        flex-direction: column;
-    }
-
-    .footer-info {
-        position: relative;
-        width: 100%;
-        border-radius: 0;
-    }
-}
-/* Notification Styles */
-.notification {
-    max-width: 400px;
-    min-width: 250px;
-}
-
-.notification.show {
-    transform: translateX(0) !important;
-}
-
-/* Video Card Styles */
-.video-card {
-    display: flex;
-    gap: 1rem;
-    padding: 1.5rem;
-    background: var(--card-bg);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 1rem;
-}
-
-.video-thumbnail {
-    width: 160px;
-    height: 90px;
-    border-radius: 8px;
-    object-fit: cover;
-}
-
-.video-details h3 {
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-}
-
-.video-details p {
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Hidden class */
-.hidden {
-    display: none !important;
-}
-
-================================================================================
-
-================================================================================
-FILE: src/main/resources/static/script.js
-================================================================================
-// Wait for the page to fully load before running any code
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded successfully!');
-    initializeApp();
-});
-
-// Global variables
-let currentUrl = '';
-let selectedQuality = '';
-let selectedFormat = 'video';
-let downloadCount = 0;
-let isMenuVisible = false;
-
-function initializeApp() {
-    console.log('Initializing app...');
-    setupEventListeners();
-    detectBrowser();
-    loadDownloadCount();
-    setupScrollHandler();
-    setupTabSwitching();
-}
-
-function setupEventListeners() {
-    // Menu toggle
-    const menuToggle = document.getElementById('menuToggle');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', toggleMenu);
-    } else {
-        console.log('Menu toggle button not found');
-    }
-
-    // URL input
-    const urlInput = document.getElementById('urlInput');
-    if (urlInput) {
-        urlInput.addEventListener('input', handleUrlInput);
-    } else {
-        console.log('URL input not found');
-    }
-}
-
-// This is the function your button calls - MAKE SURE IT'S HERE
-function analyzeVideo() {
-    console.log('Analyze button clicked!');
-
-    const urlInput = document.getElementById('urlInput');
-    if (!urlInput) {
-        alert('URL input field not found!');
-        return;
-    }
-
-    const url = urlInput.value.trim();
-
-    if (!url) {
-        alert('Please enter a YouTube URL');
-        return;
-    }
-
-    if (!isValidYouTubeUrl(url)) {
-        alert('Please enter a valid YouTube URL');
-        return;
-    }
-
-    currentUrl = url;
-    console.log('Analyzing URL:', url);
-
-    // Show loading
-    showLoading(true);
-
-    // Make API call to your backend
-    fetch('/api/youtube/check-quality', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(url)
-    })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error('Failed to analyze video');
-            }
-        })
-        .then(videoInfos => {
-            console.log('Video info received:', videoInfos);
-            displayVideoInfo(videoInfos[0]);
-            showNotification('Video analyzed successfully!', 'success');
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Failed to analyze video: ' + error.message, 'error');
-        })
-        .finally(() => {
-            showLoading(false);
-        });
-}
-
-function handleUrlInput(event) {
-    const url = event.target.value.trim();
-    if (url && !isValidYouTubeUrl(url)) {
-        event.target.style.borderColor = '#ef4444';
-    } else {
-        event.target.style.borderColor = '';
-    }
-}
-
-function setupScrollHandler() {
-    let lastScroll = 0;
-
-    window.addEventListener('scroll', () => {
-        const currentScroll = window.pageYOffset;
-        const navbar = document.getElementById('navbar');
-
-        if (!navbar) return;
-
-        if (currentScroll > 100) {
-            if (currentScroll > lastScroll && isMenuVisible) {
-                navbar.classList.remove('visible');
-                isMenuVisible = false;
-            } else if (currentScroll < lastScroll && !isMenuVisible) {
-                navbar.classList.add('visible');
-                isMenuVisible = true;
-            }
-        } else {
-            navbar.classList.remove('visible');
-            isMenuVisible = false;
-        }
-
-        lastScroll = currentScroll;
-    });
-}
-
-function toggleMenu() {
-    const navbar = document.getElementById('navbar');
-    const toggle = document.getElementById('menuToggle');
-
-    if (!navbar || !toggle) return;
-
-    if (isMenuVisible) {
-        navbar.classList.remove('visible');
-        toggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
-        isMenuVisible = false;
-    } else {
-        navbar.classList.add('visible');
-        toggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
-        isMenuVisible = true;
-    }
-}
-
-function setupTabSwitching() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-
-            btn.classList.add('active');
-            const targetTab = document.getElementById(`${btn.dataset.tab}-tab`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-
-            selectedFormat = btn.dataset.tab;
-        });
-    });
-}
-
-function displayVideoInfo(videoInfo) {
-    const videoSection = document.getElementById('videoSection');
-    if (!videoSection) {
-        console.log('Video section not found');
-        return;
-    }
-
-    videoSection.innerHTML = `
-        <div class="video-card">
-            <img src="${videoInfo.thumbnail || ''}" alt="Thumbnail" class="video-thumbnail">
-            <div class="video-details">
-                <h3>${videoInfo.title || 'Video Title'}</h3>
-                <p><i class="fas fa-clock"></i> ${videoInfo.duration || 'Unknown'}</p>
-            </div>
-        </div>
-    `;
-
-    if (videoInfo.availableQualities) {
-        displayQualityOptions(videoInfo.availableQualities);
-    }
-
-    videoSection.classList.remove('hidden');
-
-    const optionsSection = document.getElementById('optionsSection');
-    if (optionsSection) {
-        optionsSection.classList.remove('hidden');
-    }
-}
-
-function displayQualityOptions(qualities) {
-    const qualityGrid = document.getElementById('qualityGrid');
-    if (!qualityGrid) return;
-
-    qualityGrid.innerHTML = '';
-
-    const qualityLabels = {
-        '1080p': 'Full HD',
-        '720p': 'HD',
-        '480p': 'SD',
-        '360p': 'Low',
-        'best': 'Best Quality',
-        'worst': 'Smallest Size'
-    };
-
-    qualities.forEach(quality => {
-        const option = document.createElement('div');
-        option.className = 'quality-option';
-        option.onclick = () => selectQuality(quality, option);
-
-        option.innerHTML = `
-            <i class="fas fa-video"></i>
-            <h4>${quality}</h4>
-            <p>${qualityLabels[quality] || 'Standard'}</p>
-        `;
-
-        qualityGrid.appendChild(option);
-    });
-}
-
-function selectQuality(quality, element) {
-    document.querySelectorAll('.quality-option').forEach(opt => {
-        opt.classList.remove('selected');
-    });
-    element.classList.add('selected');
-    selectedQuality = quality;
-
-    showNotification(`Selected quality: ${quality}`, 'info');
-}
-
-async function detectBrowser() {
-    try {
-        const response = await fetch('/api/youtube/detect-browser');
-        const browser = await response.text();
-        const detectedBrowser = document.getElementById('detectedBrowser');
-        if (detectedBrowser) {
-            detectedBrowser.innerHTML = `
-                <i class="fab fa-${browser}"></i> ${browser.charAt(0).toUpperCase() + browser.slice(1)} Detected
-            `;
-        }
-    } catch (error) {
-        console.log('Browser detection failed:', error);
-    }
-}
-
-function showLoading(show) {
-    const loading = document.getElementById('loadingOverlay');
-    if (!loading) {
-        console.log('Loading overlay not found');
-        return;
-    }
-
-    if (show) {
-        loading.classList.remove('hidden');
-    } else {
-        loading.classList.add('hidden');
-    }
-}
-
-function showNotification(message, type = 'info') {
-    console.log(`${type.toUpperCase()}: ${message}`);
-
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i>
-        ${message}
-    `;
-
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        color: white;
-        z-index: 10000;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 500;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    `;
-
-    if (type === 'success') notification.style.backgroundColor = '#10b981';
-    else if (type === 'error') notification.style.backgroundColor = '#ef4444';
-    else notification.style.backgroundColor = '#6366f1';
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (document.body.contains(notification)) {
-                document.body.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-function isValidYouTubeUrl(url) {
-    return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(url);
-}
-
-function loadDownloadCount() {
-    const saved = localStorage.getItem('downloadCount');
-    if (saved) {
-        downloadCount = parseInt(saved);
-        const downloadCountElement = document.getElementById('downloadCount');
-        if (downloadCountElement) {
-            downloadCountElement.textContent = downloadCount;
-        }
-    }
-}
-
-function clearAll() {
-    const urlInput = document.getElementById('urlInput');
-    const videoSection = document.getElementById('videoSection');
-    const optionsSection = document.getElementById('optionsSection');
-
-    if (urlInput) urlInput.value = '';
-    if (videoSection) videoSection.classList.add('hidden');
-    if (optionsSection) optionsSection.classList.add('hidden');
-
-    showNotification('Cleared all data', 'info');
-}
-
-function openSettings() {
-    showNotification('Settings panel coming soon!', 'info');
-}
-
-// Make functions available globally for onclick events
-window.analyzeVideo = analyzeVideo;
-window.clearAll = clearAll;
-window.openSettings = openSettings;
-
-================================================================================
+[FILE NOT FOUND: src/main/resources/static/script.js]
 
 ================================================================================
 FILE: .idea/compiler.xml
@@ -1854,12 +1107,12 @@ FILE: .idea/workspace.xml
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="26a71d8f-7920-4ab3-81e6-8409a82ce484" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/karan/youtubedownloader/service/YouTubeService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/karan/youtubedownloader/service/YouTubeService.java" afterDir="false" />
+    <list default="true" id="26a71d8f-7920-4ab3-81e6-8409a82ce484" name="Changes" comment="2nd Commit">
+      <change afterPath="$PROJECT_DIR$/src/main/resources/static/js/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/enhanced-index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/script.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/youtube_downloader_complete_code.txt" beforeDir="false" afterPath="$PROJECT_DIR$/youtube_downloader_complete_code.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/script.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/css/style.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -1876,18 +1129,18 @@ FILE: .idea/workspace.xml
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "karan0704"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;karan0704&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/karan0704/Youtube-Video-Downloader.git",
-    "accountId": "54636cc6-44ce-4c2a-8924-892395f41c9f"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/karan0704/Youtube-Video-Downloader.git&quot;,
+    &quot;accountId&quot;: &quot;54636cc6-44ce-4c2a-8924-892395f41c9f&quot;
   }
-}]]></component>
+}</component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -1922,17 +1175,26 @@ FILE: .idea/workspace.xml
     "RunOnceActivity.git.unshallow": "true",
     "Spring Boot.YoutubeVIdeoDownloaderApplication.executor": "Run",
     "git-widget-placeholder": "main",
+    "last_opened_file_path": "D:/Karan Ticket Project/Youtube VIdeo Downloader",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
     "settings.editor.selected.configurable": "preferences.pluginManager",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Karan Ticket Project\Youtube VIdeo Downloader" />
+      <recent name="D:\Karan Ticket Project\Youtube VIdeo Downloader\src\main\resources\static" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\Karan Ticket Project\Youtube VIdeo Downloader\src\main\resources\static\css" />
       <recent name="D:\Karan Ticket Project\Youtube VIdeo Downloader\src\main\java\com\karan\youtubedownloader" />
     </key>
   </component>
@@ -1965,8 +1227,18 @@ FILE: .idea/workspace.xml
       <workItem from="1754624275612" duration="1597000" />
       <workItem from="1754638073460" duration="69000" />
       <workItem from="1754925541029" duration="162000" />
-      <workItem from="1754970212742" duration="3191000" />
+      <workItem from="1754970212742" duration="3881000" />
+      <workItem from="1754974209616" duration="1889000" />
     </task>
+    <task id="LOCAL-00001" summary="2nd Commit">
+      <option name="closed" value="true" />
+      <created>1754975398753</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1754975398753</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1977,22 +1249,21 @@ FILE: .idea/workspace.xml
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
     </option>
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="javascript">
-          <url>file://$PROJECT_DIR$/src/main/resources/static/script.js</url>
-          <line>10</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="2nd Commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="2nd Commit" />
   </component>
 </project>
 ================================================================================
@@ -2011,15 +1282,29 @@ Youtube VIdeo Downloader/
   project_code_extractor.py
   project_generator.py
   project_summary.txt
+  script1.py
+  script2.py
   youtube_downloader_complete_code.txt
   .idea/
     .gitignore
     compiler.xml
+    dataSources.local.xml
+    dataSources.xml
     encodings.xml
     jarRepositories.xml
     misc.xml
     vcs.xml
     workspace.xml
+    dataSources/
+      cd6f2e6b-6bf4-49a0-8f21-60406dc8c510.xml
+      cd6f2e6b-6bf4-49a0-8f21-60406dc8c510/
+        storage_v2/
+          _src_/
+            schema/
+              information_schema.FNRwLQ.meta
+              mysql.osA4Bg.meta
+              performance_schema.kIw0nw.meta
+              sys.zb4BAA.meta
   .mvn/
     wrapper/
       maven-wrapper.properties
@@ -2047,9 +1332,14 @@ Youtube VIdeo Downloader/
         application.properties
         static/
           index.html
-          script.js
-          style.css
           u.txt
+          css/
+            style.css
+          js/
+            api.js
+            app.js
+            events.js
+            ui.js
         templates/
     test/
       java/
