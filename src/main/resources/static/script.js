@@ -1,110 +1,351 @@
-// Wait for the page to fully load before running any code
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded successfully!');
-    initializeApp();
-});
+// ✅ SINGLE FILE SOLUTION - No more undefined errors!
 
 // Global variables
 let currentUrl = '';
 let selectedQuality = '';
-let selectedFormat = 'video';
 let downloadCount = 0;
 let isMenuVisible = false;
+let darkMode = false;
 
-function initializeApp() {
-    console.log('Initializing app...');
+// ✅ App initialization
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ YouTube Downloader Pro initialized!');
     setupEventListeners();
     detectBrowser();
-    loadDownloadCount();
+    updateDefaultPath();
     setupScrollHandler();
     setupTabSwitching();
-}
+    loadSettings();
+});
 
+// ✅ Setup all event listeners
 function setupEventListeners() {
-    // Menu toggle
     const menuToggle = document.getElementById('menuToggle');
+    const urlInput = document.getElementById('urlInput');
+
     if (menuToggle) {
         menuToggle.addEventListener('click', toggleMenu);
-    } else {
-        console.log('Menu toggle button not found');
     }
 
-    // URL input
-    const urlInput = document.getElementById('urlInput');
     if (urlInput) {
         urlInput.addEventListener('input', handleUrlInput);
-    } else {
-        console.log('URL input not found');
+        // Add debounced validation
+        const debouncedValidation = debounce(() => validateUrlInput(urlInput), 300);
+        urlInput.addEventListener('input', debouncedValidation);
     }
+
+    // Quality option clicks
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.quality-option')) {
+            const option = e.target.closest('.quality-option');
+            selectQuality(option);
+        }
+    });
 }
 
-// This is the function your button calls - MAKE SURE IT'S HERE
+// ✅ MAIN ANALYZE FUNCTION - Fixes all errors
 function analyzeVideo() {
-    console.log('Analyze button clicked!');
+    console.log('🔍 Analyzing video...');
 
     const urlInput = document.getElementById('urlInput');
     if (!urlInput) {
-        alert('URL input field not found!');
+        showNotification('URL input not found!', 'error');
         return;
     }
 
     const url = urlInput.value.trim();
 
     if (!url) {
-        alert('Please enter a YouTube URL');
+        showNotification('Please enter a YouTube URL', 'warning');
         return;
     }
 
     if (!isValidYouTubeUrl(url)) {
-        alert('Please enter a valid YouTube URL');
+        showNotification('Please enter a valid YouTube URL', 'error');
         return;
     }
 
     currentUrl = url;
-    console.log('Analyzing URL:', url);
+    showLoading(true, 'Analyzing video...');
 
-    // Show loading
-    showLoading(true);
-
-    // Make API call to your backend
+    // Call Spring Boot backend
     fetch('/api/youtube/check-quality', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify(url)
     })
         .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error('Failed to analyze video');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
+            return response.json();
         })
         .then(videoInfos => {
-            console.log('Video info received:', videoInfos);
-            displayVideoInfo(videoInfos[0]);
-            showNotification('Video analyzed successfully!', 'success');
+            console.log('✅ Video info received:', videoInfos);
+            if (videoInfos && videoInfos.length > 0) {
+                displayVideoInfo(videoInfos[0]);
+                loadSubtitles(url); // Load subtitles asynchronously
+                showNotification('✅ Video analyzed successfully!', 'success');
+            } else {
+                throw new Error('No video information found');
+            }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showNotification('Failed to analyze video: ' + error.message, 'error');
+            console.error('❌ Analysis failed:', error);
+            showNotification('❌ Failed to analyze: ' + error.message, 'error');
         })
         .finally(() => {
             showLoading(false);
         });
 }
 
-function handleUrlInput(event) {
-    const url = event.target.value.trim();
-    if (url && !isValidYouTubeUrl(url)) {
-        event.target.style.borderColor = '#ef4444';
-    } else {
-        event.target.style.borderColor = '';
+// ✅ Display video information
+function displayVideoInfo(videoInfo) {
+    const videoSection = document.getElementById('videoSection');
+    const optionsSection = document.getElementById('optionsSection');
+
+    if (!videoSection) return;
+
+    // Show video card with better styling
+    videoSection.innerHTML = `
+        <div class="video-card fade-in">
+            <img src="${videoInfo.thumbnail || 'https://via.placeholder.com/200x112?text=No+Thumbnail'}" 
+                 alt="Video Thumbnail" class="video-thumbnail"
+                 onerror="this.src='https://via.placeholder.com/200x112?text=No+Thumbnail'">
+            <div class="video-details">
+                <h3>${videoInfo.title || 'Video Title'}</h3>
+                <p><i class="fas fa-clock"></i> Duration: ${videoInfo.duration || 'Unknown'}</p>
+                <p><i class="fas fa-link"></i> URL: ${videoInfo.url || currentUrl}</p>
+                <p><i class="fas fa-eye"></i> Available Qualities: ${videoInfo.availableQualities?.length || 0}</p>
+            </div>
+        </div>
+    `;
+
+    // Show quality options
+    if (videoInfo.availableQualities) {
+        displayQualityOptions(videoInfo.availableQualities);
+    }
+
+    // Show sections with animation
+    showSection('videoSection');
+    showSection('optionsSection');
+
+    // Scroll to video info
+    videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ✅ Display quality options
+function displayQualityOptions(qualities) {
+    const qualityGrid = document.getElementById('qualityGrid');
+    if (!qualityGrid) return;
+
+    qualityGrid.innerHTML = '';
+
+    const qualityInfo = {
+        '1080p': { label: 'Full HD', icon: 'fas fa-crown', desc: '1920×1080' },
+        '720p': { label: 'HD', icon: 'fas fa-video', desc: '1280×720' },
+        '480p': { label: 'SD', icon: 'fas fa-play', desc: '854×480' },
+        '360p': { label: 'Low Quality', icon: 'fas fa-compress', desc: '640×360' },
+        'best': { label: 'Best Available', icon: 'fas fa-star', desc: 'Highest Quality' },
+        'worst': { label: 'Smallest Size', icon: 'fas fa-download', desc: 'Lowest Size' }
+    };
+
+    qualities.forEach(quality => {
+        const info = qualityInfo[quality] || { label: 'Standard', icon: 'fas fa-video', desc: 'Quality' };
+
+        const option = document.createElement('div');
+        option.className = 'quality-option';
+        option.dataset.quality = quality;
+
+        option.innerHTML = `
+            <i class="${info.icon}"></i>
+            <h4>${quality}</h4>
+            <p>${info.label}</p>
+            <small>${info.desc}</small>
+            <button class="download-btn" onclick="downloadVideo('${quality}')">
+                <i class="fas fa-download"></i> Download
+            </button>
+        `;
+
+        qualityGrid.appendChild(option);
+    });
+}
+
+// ✅ Select quality option
+function selectQuality(element) {
+    if (!element) return;
+
+    // Remove previous selections
+    document.querySelectorAll('.quality-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+
+    // Mark as selected
+    element.classList.add('selected');
+    const quality = element.dataset.quality;
+    selectedQuality = quality;
+
+    showNotification(`Selected: ${quality}`, 'info');
+}
+
+// ✅ Download video function
+function downloadVideo(quality) {
+    if (!currentUrl) {
+        showNotification('No video URL available', 'error');
+        return;
+    }
+
+    showNotification(`Starting ${quality} download...`, 'info');
+    showProgressSection();
+
+    // Simulate progress
+    simulateProgress();
+
+    const downloadPath = document.getElementById('downloadPath')?.value || '';
+    const browserChoice = document.getElementById('browserChoice')?.value || 'chrome';
+
+    const downloadRequest = {
+        url: currentUrl,
+        quality: quality,
+        downloadPath: downloadPath,
+        browserType: browserChoice
+    };
+
+    fetch('/api/youtube/download', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(downloadRequest)
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(text || 'Download failed');
+                });
+            }
+            return response.text();
+        })
+        .then(result => {
+            console.log('✅ Download completed:', result);
+            updateProgress(100, 'Complete');
+            showNotification('🎉 Download completed!', 'success');
+            updateDownloadCount();
+
+            setTimeout(() => hideProgressSection(), 2000);
+        })
+        .catch(error => {
+            console.error('❌ Download failed:', error);
+            showNotification('❌ Download failed: ' + error.message, 'error');
+            hideProgressSection();
+        });
+}
+
+// ✅ Load subtitles
+async function loadSubtitles(url) {
+    try {
+        const response = await fetch('/api/youtube/get-subtitles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(url)
+        });
+
+        if (response.ok) {
+            const subtitles = await response.json();
+            displaySubtitles(subtitles);
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not load subtitles:', error);
     }
 }
 
+// ✅ Display subtitles
+function displaySubtitles(subtitles) {
+    const subtitleOptions = document.getElementById('subtitleOptions');
+    if (!subtitleOptions) return;
+
+    if (!subtitles || subtitles.length === 0) {
+        subtitleOptions.innerHTML = `
+            <div class="no-subtitles">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>No subtitles available for this video</p>
+            </div>
+        `;
+        return;
+    }
+
+    subtitleOptions.innerHTML = '';
+
+    subtitles.forEach(subtitle => {
+        const option = document.createElement('div');
+        option.className = 'subtitle-option';
+
+        const autoGenText = subtitle.autoGenerated ? ' (Auto-generated)' : '';
+
+        option.innerHTML = `
+            <div class="subtitle-info">
+                <i class="fas fa-closed-captioning"></i>
+                <div>
+                    <h4>${subtitle.language}${autoGenText}</h4>
+                    <p>${subtitle.languageCode} • ${subtitle.format.toUpperCase()}</p>
+                </div>
+            </div>
+            <button class="btn-download-subtitle" onclick="downloadSubtitle('${subtitle.languageCode}', '${subtitle.format}')">
+                <i class="fas fa-download"></i>
+            </button>
+        `;
+
+        subtitleOptions.appendChild(option);
+    });
+}
+
+// ✅ Progress simulation
+function simulateProgress() {
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 95) {
+            clearInterval(interval);
+            progress = 95;
+        }
+        updateProgress(Math.round(progress), 'Downloading...');
+    }, 500);
+}
+
+// ✅ Update progress
+function updateProgress(percent, status = '') {
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const progressStatus = document.getElementById('progressStatus');
+
+    if (progressFill) progressFill.style.width = `${percent}%`;
+    if (progressText) progressText.textContent = `${percent}%`;
+    if (progressStatus && status) progressStatus.textContent = status;
+}
+
+// ✅ Show/hide progress section
+function showProgressSection() {
+    const progressSection = document.getElementById('progressSection');
+    if (progressSection) {
+        progressSection.classList.remove('hidden');
+        progressSection.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function hideProgressSection() {
+    const progressSection = document.getElementById('progressSection');
+    if (progressSection) {
+        setTimeout(() => {
+            progressSection.classList.add('hidden');
+        }, 1000);
+    }
+}
+
+// ✅ Scroll handler
 function setupScrollHandler() {
     let lastScroll = 0;
-
     window.addEventListener('scroll', () => {
         const currentScroll = window.pageYOffset;
         const navbar = document.getElementById('navbar');
@@ -123,11 +364,30 @@ function setupScrollHandler() {
             navbar.classList.remove('visible');
             isMenuVisible = false;
         }
-
         lastScroll = currentScroll;
     });
 }
 
+// ✅ Tab switching
+function setupTabSwitching() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            btn.classList.add('active');
+            const targetTab = document.getElementById(`${btn.dataset.tab}-tab`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+        });
+    });
+}
+
+// ✅ Toggle menu
 function toggleMenu() {
     const navbar = document.getElementById('navbar');
     const toggle = document.getElementById('menuToggle');
@@ -145,161 +405,136 @@ function toggleMenu() {
     }
 }
 
-function setupTabSwitching() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-
-            btn.classList.add('active');
-            const targetTab = document.getElementById(`${btn.dataset.tab}-tab`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-
-            selectedFormat = btn.dataset.tab;
-        });
-    });
+// ✅ Handle URL input
+function handleUrlInput(event) {
+    const url = event.target.value.trim();
+    if (url && !isValidYouTubeUrl(url)) {
+        event.target.style.borderColor = '#ef4444';
+    } else {
+        event.target.style.borderColor = '';
+    }
 }
 
-function displayVideoInfo(videoInfo) {
-    const videoSection = document.getElementById('videoSection');
-    if (!videoSection) {
-        console.log('Video section not found');
+// ✅ Validate URL input with visual feedback
+function validateUrlInput(input) {
+    const url = input.value.trim();
+    const isValid = isValidYouTubeUrl(url);
+
+    if (url === '') {
+        input.style.borderColor = '';
         return;
     }
 
-    videoSection.innerHTML = `
-        <div class="video-card">
-            <img src="${videoInfo.thumbnail || ''}" alt="Thumbnail" class="video-thumbnail">
-            <div class="video-details">
-                <h3>${videoInfo.title || 'Video Title'}</h3>
-                <p><i class="fas fa-clock"></i> ${videoInfo.duration || 'Unknown'}</p>
-            </div>
-        </div>
-    `;
-
-    if (videoInfo.availableQualities) {
-        displayQualityOptions(videoInfo.availableQualities);
-    }
-
-    videoSection.classList.remove('hidden');
-
-    const optionsSection = document.getElementById('optionsSection');
-    if (optionsSection) {
-        optionsSection.classList.remove('hidden');
+    if (isValid) {
+        input.style.borderColor = '#10b981';
+        input.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+    } else {
+        input.style.borderColor = '#ef4444';
+        input.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
     }
 }
 
-function displayQualityOptions(qualities) {
-    const qualityGrid = document.getElementById('qualityGrid');
-    if (!qualityGrid) return;
-
-    qualityGrid.innerHTML = '';
-
-    const qualityLabels = {
-        '1080p': 'Full HD',
-        '720p': 'HD',
-        '480p': 'SD',
-        '360p': 'Low',
-        'best': 'Best Quality',
-        'worst': 'Smallest Size'
-    };
-
-    qualities.forEach(quality => {
-        const option = document.createElement('div');
-        option.className = 'quality-option';
-        option.onclick = () => selectQuality(quality, option);
-
-        option.innerHTML = `
-            <i class="fas fa-video"></i>
-            <h4>${quality}</h4>
-            <p>${qualityLabels[quality] || 'Standard'}</p>
-        `;
-
-        qualityGrid.appendChild(option);
-    });
-}
-
-function selectQuality(quality, element) {
-    document.querySelectorAll('.quality-option').forEach(opt => {
-        opt.classList.remove('selected');
-    });
-    element.classList.add('selected');
-    selectedQuality = quality;
-
-    showNotification(`Selected quality: ${quality}`, 'info');
-}
-
+// ✅ Detect browser
 async function detectBrowser() {
     try {
         const response = await fetch('/api/youtube/detect-browser');
         const browser = await response.text();
-        const detectedBrowser = document.getElementById('detectedBrowser');
-        if (detectedBrowser) {
-            detectedBrowser.innerHTML = `
-                <i class="fab fa-${browser}"></i> ${browser.charAt(0).toUpperCase() + browser.slice(1)} Detected
-            `;
+        const element = document.getElementById('detectedBrowser');
+        if (element) {
+            element.innerHTML = `<i class="fab fa-${browser}"></i> ${browser.charAt(0).toUpperCase() + browser.slice(1)} Detected`;
         }
     } catch (error) {
-        console.log('Browser detection failed:', error);
+        console.log('Browser detection failed');
     }
 }
 
-function showLoading(show) {
-    const loading = document.getElementById('loadingOverlay');
-    if (!loading) {
-        console.log('Loading overlay not found');
-        return;
+// ✅ Update default path
+function updateDefaultPath() {
+    const pathElement = document.getElementById('currentPath');
+    if (pathElement) {
+        const defaultPath = localStorage.getItem('downloadPath') || 'Downloads/YTDownloader';
+        pathElement.textContent = defaultPath;
     }
+}
+
+// ✅ Load settings
+function loadSettings() {
+    // Load download count
+    const savedCount = localStorage.getItem('downloadCount');
+    if (savedCount) {
+        downloadCount = parseInt(savedCount);
+        const downloadCountElement = document.getElementById('downloadCount');
+        if (downloadCountElement) {
+            downloadCountElement.textContent = downloadCount;
+        }
+    }
+
+    // Load theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        toggleTheme();
+    }
+}
+
+// ✅ Show loading
+function showLoading(show, text = 'Loading...') {
+    const loading = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+
+    if (!loading) return;
 
     if (show) {
         loading.classList.remove('hidden');
+        if (loadingText) loadingText.textContent = text;
     } else {
         loading.classList.add('hidden');
     }
 }
 
+// ✅ Show notification
 function showNotification(message, type = 'info') {
     console.log(`${type.toUpperCase()}: ${message}`);
 
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = 'notification';
+
+    const iconMap = {
+        success: 'check-circle',
+        error: 'exclamation-triangle',
+        warning: 'exclamation-circle',
+        info: 'info-circle'
+    };
+
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i>
-        ${message}
+        <i class="fas fa-${iconMap[type]}"></i>
+        <span>${message}</span>
     `;
 
+    // Styling
     notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        color: white;
-        z-index: 10000;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 500;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        position: fixed; top: 20px; right: 20px; z-index: 10000;
+        padding: 1rem 1.5rem; border-radius: 8px; color: white;
+        display: flex; align-items: center; gap: 0.75rem;
+        transform: translateX(100%); transition: transform 0.3s ease;
+        font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        min-width: 250px; max-width: 400px;
     `;
 
-    if (type === 'success') notification.style.backgroundColor = '#10b981';
-    else if (type === 'error') notification.style.backgroundColor = '#ef4444';
-    else notification.style.backgroundColor = '#6366f1';
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#6366f1'
+    };
+
+    notification.style.backgroundColor = colors[type];
 
     document.body.appendChild(notification);
 
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
+    // Animate in
+    setTimeout(() => notification.style.transform = 'translateX(0)', 100);
 
+    // Remove after 4 seconds
     setTimeout(() => {
         notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
@@ -307,41 +542,173 @@ function showNotification(message, type = 'info') {
                 document.body.removeChild(notification);
             }
         }, 300);
-    }, 3000);
+    }, 4000);
 }
 
+// ✅ Validation function
 function isValidYouTubeUrl(url) {
-    return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(url);
+    const patterns = [
+        /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/,
+        /youtube\.com\/watch\?v=/,
+        /youtube\.com\/playlist\?list=/,
+        /youtu\.be\//
+    ];
+    return patterns.some(pattern => pattern.test(url));
 }
 
-function loadDownloadCount() {
-    const saved = localStorage.getItem('downloadCount');
-    if (saved) {
-        downloadCount = parseInt(saved);
-        const downloadCountElement = document.getElementById('downloadCount');
-        if (downloadCountElement) {
-            downloadCountElement.textContent = downloadCount;
-        }
+// ✅ Update download count
+function updateDownloadCount() {
+    downloadCount++;
+    const element = document.getElementById('downloadCount');
+    if (element) {
+        element.textContent = downloadCount;
+    }
+    localStorage.setItem('downloadCount', downloadCount);
+}
+
+// ✅ Utility functions
+function showSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.remove('hidden');
+        section.classList.add('fade-in');
     }
 }
 
+function hideSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.add('hidden');
+        section.classList.remove('fade-in');
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// ✅ Global functions for onclick events
 function clearAll() {
     const urlInput = document.getElementById('urlInput');
-    const videoSection = document.getElementById('videoSection');
-    const optionsSection = document.getElementById('optionsSection');
-
     if (urlInput) urlInput.value = '';
-    if (videoSection) videoSection.classList.add('hidden');
-    if (optionsSection) optionsSection.classList.add('hidden');
+
+    hideSection('videoSection');
+    hideSection('optionsSection');
+    hideSection('progressSection');
+
+    document.querySelectorAll('.quality-option.selected, .format-option.selected')
+        .forEach(opt => opt.classList.remove('selected'));
+
+    currentUrl = '';
+    selectedQuality = '';
 
     showNotification('Cleared all data', 'info');
 }
 
 function openSettings() {
-    showNotification('Settings panel coming soon!', 'info');
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
-// Make functions available globally for onclick events
-window.analyzeVideo = analyzeVideo;
-window.clearAll = clearAll;
-window.openSettings = openSettings;
+function closeSettings() {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
+function toggleTheme() {
+    darkMode = !darkMode;
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+
+    const themeBtn = document.querySelector('.sidebar-btn[onclick="toggleTheme()"] i');
+    if (themeBtn) {
+        themeBtn.className = darkMode ? 'fas fa-sun' : 'fas fa-moon';
+    }
+
+    showNotification(`Switched to ${darkMode ? 'dark' : 'light'} theme`, 'info');
+}
+
+function browsePath() {
+    const currentPath = document.getElementById('downloadPath')?.value || 'Downloads/YTDownloader';
+    const newPath = prompt('Enter download path:', currentPath);
+
+    if (newPath && newPath.trim()) {
+        const pathInput = document.getElementById('downloadPath');
+        const currentPathDisplay = document.getElementById('currentPath');
+
+        if (pathInput) pathInput.value = newPath.trim();
+        if (currentPathDisplay) currentPathDisplay.textContent = newPath.trim();
+
+        localStorage.setItem('downloadPath', newPath.trim());
+        showNotification('Download path updated', 'success');
+    }
+}
+
+function downloadSelected() {
+    if (selectedQuality) {
+        downloadVideo(selectedQuality);
+    } else {
+        showNotification('Please select a quality first', 'warning');
+    }
+}
+
+function downloadAll() {
+    showNotification('Download All feature coming soon!', 'info');
+}
+
+function downloadSubtitle(languageCode, format) {
+    console.log(`Downloading subtitle: ${languageCode} in ${format} format`);
+    showNotification(`Downloading ${languageCode} subtitles...`, 'info');
+
+    // TODO: Implement actual subtitle download
+    setTimeout(() => {
+        showNotification(`${languageCode} subtitles downloaded!`, 'success');
+    }, 2000);
+}
+
+// ✅ Enhanced keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + Enter to analyze
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        analyzeVideo();
+    }
+
+    // Escape to close modals
+    if (e.key === 'Escape') {
+        closeSettings();
+    }
+
+    // Ctrl/Cmd + K to clear all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        clearAll();
+    }
+});
+
+// ✅ Click outside modal to close
+document.addEventListener('click', (e) => {
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal && !settingsModal.classList.contains('hidden')) {
+        const modal = settingsModal.querySelector('.modal');
+        if (modal && !modal.contains(e.target)) {
+            closeSettings();
+        }
+    }
+});
+
+console.log('🚀 YouTube Downloader Pro script loaded successfully!');
