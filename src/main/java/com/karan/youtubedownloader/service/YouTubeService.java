@@ -103,52 +103,25 @@ public class YouTubeService {
             downloadsDir.mkdirs();
         }
 
-        boolean isPlaylist = url.contains("playlist?list=") || url.contains("&list=");
         String formatSelector = getQualityFormat(quality);
 
-        ProcessBuilder processBuilder;
+        // ✅ FIXED: Proper command building
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+        command.add("-f");
+        command.add(formatSelector);
+        command.add("-o");
+        command.add(downloadsPath + File.separator + "%(title)s.%(ext)s");
+        command.add("--merge-output-format");
+        command.add("mp4");
+        command.add("--ignore-errors");
+        command.add("--continue");
+        // ✅ REMOVED Chrome cookies that were causing the error
+        command.add(url); // ✅ URL must be the LAST argument
 
-        if (quality.equals("playlist-all") && isPlaylist) {
-            log.info("📋 Downloading entire playlist with authentication");
-            processBuilder = new ProcessBuilder(
-                    "yt-dlp",
-                    "-f", formatSelector,
-                    "-o", downloadsPath + File.separator + "%(playlist_title)s" + File.separator + "%(playlist_index)s - %(title)s.%(ext)s",
-                    "--merge-output-format", "mp4",
-                    "--ignore-errors",
-                    "--no-abort-on-error",
-                    "--continue",
-                    "--cookies-from-browser", "chrome", // ✅ Use Chrome cookies
-                    url
-            );
-        } else if (isPlaylist) {
-            log.info("📺 Downloading single video from playlist with authentication");
-            processBuilder = new ProcessBuilder(
-                    "yt-dlp",
-                    "-f", formatSelector,
-                    "-o", downloadsPath + File.separator + "%(title)s.%(ext)s",
-                    "--merge-output-format", "mp4",
-                    "--no-playlist",
-                    "--ignore-errors",
-                    "--continue",
-                    "--cookies-from-browser", "chrome", // ✅ Use Chrome cookies
-                    url
-            );
-        } else {
-            log.info("📺 Downloading single video with authentication");
-            processBuilder = new ProcessBuilder(
-                    "yt-dlp",
-                    "-f", formatSelector,
-                    "-o", downloadsPath + File.separator + "%(title)s.%(ext)s",
-                    "--merge-output-format", "mp4",
-                    "--ignore-errors",
-                    "--continue",
-                    "--cookies-from-browser", "chrome", // ✅ Use Chrome cookies
-                    url
-            );
-        }
+        log.info("🔧 Command: {}", String.join(" ", command));
 
-        // Rest of your existing code...
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
         Process process = processBuilder.start();
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -171,12 +144,9 @@ public class YouTubeService {
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {
-            return String.format("🎉 Video downloaded with authentication to %s!", downloadsPath);
+            return String.format("🎉 Video downloaded successfully to %s!", downloadsPath);
         } else {
             String errorMessage = errorOutput.toString().trim();
-            if (errorMessage.contains("cookies") || errorMessage.contains("authentication")) {
-                throw new RuntimeException("Authentication failed. Please make sure you're logged into YouTube in your browser.");
-            }
             throw new RuntimeException("Download failed: " + errorMessage);
         }
     }
