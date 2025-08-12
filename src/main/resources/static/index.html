@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Downloader | Karan's Project</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Modern Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="app-container">
+    <!-- Header Section -->
+    <header class="header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>YouTube Downloader</h1>
+                    <p>Professional Video Download Tool</p>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <i class="fas fa-download"></i>
+                    <span id="downloadCount">0</span>
+                    <small>Downloads</small>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- URL Input Section -->
+            <section class="input-section card">
+                <div class="section-header">
+                    <h2><i class="fas fa-link"></i> Enter YouTube URL</h2>
+                    <p>Paste any YouTube video or playlist URL to get started</p>
+                </div>
+
+                <div class="url-input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-paste input-icon"></i>
+                        <textarea
+                                id="urlInput"
+                                placeholder="https://www.youtube.com/watch?v=example&#10;&#10;Supports both videos and playlists!"
+                                rows="3"
+                        ></textarea>
+                    </div>
+                    <button class="btn-primary" onclick="checkQualities()">
+                        <i class="fas fa-search"></i>
+                        <span>Analyze Video</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Download Path Selection -->
+            <section class="path-section card" id="pathSection">
+                <div class="section-header">
+                    <h3><i class="fas fa-folder"></i> Download Location</h3>
+                </div>
+                <div class="path-options">
+                    <div class="path-option active" data-path="default">
+                        <i class="fas fa-download"></i>
+                        <div class="path-info">
+                            <strong>Default Downloads</strong>
+                            <small id="defaultPath">C:\Users\YourName\Downloads\YouTubeDownloader</small>
+                        </div>
+                        <input type="radio" name="downloadPath" value="default" checked>
+                    </div>
+                    <div class="path-option" data-path="custom">
+                        <i class="fas fa-folder-open"></i>
+                        <div class="path-info">
+                            <strong>Choose Custom Folder</strong>
+                            <small>Select where to save your videos</small>
+                        </div>
+                        <input type="radio" name="downloadPath" value="custom">
+                    </div>
+                </div>
+                <div class="custom-path-input hidden" id="customPathInput">
+                    <input type="text" id="customPath" placeholder="C:\Your\Custom\Folder">
+                    <button class="btn-secondary" onclick="browseFolder()">
+                        <i class="fas fa-search"></i> Browse
+                    </button>
+                </div>
+            </section>
+            <!-- Add this section after path selection -->
+            <section class="auth-section card" id="authSection">
+                <div class="section-header">
+                    <h3><i class="fas fa-shield-alt"></i> Authentication for Age-Restricted Videos</h3>
+                    <p>Select your browser to use existing YouTube login</p>
+                </div>
+                <div class="browser-options">
+                    <div class="browser-option active" data-browser="chrome">
+                        <i class="fab fa-chrome"></i>
+                        <div class="browser-info">
+                            <strong>Google Chrome</strong>
+                            <small>Use Chrome's YouTube cookies</small>
+                        </div>
+                        <input type="radio" name="browserType" value="chrome" checked>
+                    </div>
+                    <div class="browser-option" data-browser="firefox">
+                        <i class="fab fa-firefox"></i>
+                        <div class="browser-info">
+                            <strong>Mozilla Firefox</strong>
+                            <small>Use Firefox's YouTube cookies</small>
+                        </div>
+                        <input type="radio" name="browserType" value="firefox">
+                    </div>
+                    <div class="browser-option" data-browser="edge">
+                        <i class="fab fa-edge"></i>
+                        <div class="browser-info">
+                            <strong>Microsoft Edge</strong>
+                            <small>Use Edge's YouTube cookies</small>
+                        </div>
+                        <input type="radio" name="browserType" value="edge">
+                    </div>
+                </div>
+                <div class="auth-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>How it works:</strong> The app will use your existing YouTube login from the selected
+                    browser to download age-restricted videos.
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <div id="loadingSection" class="loading-section hidden">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <h3>Analyzing Video...</h3>
+                    <p>Getting available quality options</p>
+                </div>
+            </div>
+
+            <!-- Video Information -->
+            <section id="videoSection" class="video-section card hidden">
+                <div class="section-header">
+                    <h3><i class="fas fa-video"></i> Video Information</h3>
+                </div>
+                <div id="videoInfo" class="video-info">
+                    <!-- Video details will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Quality Selection -->
+            <section id="qualitySection" class="quality-section card hidden">
+                <div class="section-header">
+                    <h3><i class="fas fa-cog"></i> Select Quality</h3>
+                    <p>Choose your preferred video quality</p>
+                </div>
+                <div id="qualityGrid" class="quality-grid">
+                    <!-- Quality options will be inserted here -->
+                </div>
+                <div class="download-actions">
+                    <button id="downloadBtn" class="btn-download" onclick="downloadVideo()" disabled>
+                        <i class="fas fa-cloud-download-alt"></i>
+                        <span>Download Video</span>
+                        <div class="btn-shine"></div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Download Progress -->
+            <section id="progressSection" class="progress-section card hidden">
+                <div class="section-header">
+                    <h3><i class="fas fa-tasks"></i> Download Progress</h3>
+                </div>
+                <div class="progress-content">
+                    <div class="progress-circle">
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg"
+                                  d="M18 2.0845
+                                        a 15.9155 15.9155 0 0 1 0 31.831
+                                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <path id="progressCircle" class="circle"
+                                  d="M18 2.0845
+                                        a 15.9155 15.9155 0 0 1 0 31.831
+                                        a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <text id="progressPercent" x="18" y="20.35" class="percentage">0%</text>
+                        </svg>
+                    </div>
+                    <div class="progress-details">
+                        <h4 id="progressTitle">Preparing Download...</h4>
+                        <p id="progressStatus">Initializing download process</p>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Status Messages -->
+            <div id="statusContainer" class="status-container">
+                <!-- Status messages will appear here -->
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <p>Built with ❤️ by <strong>Karan</strong></p>
+                <p>Spring Boot + yt-dlp Integration</p>
+            </div>
+            <div class="footer-links">
+                <a href="#" class="footer-link">
+                    <i class="fab fa-github"></i> Source Code
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-icon success">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3>Download Complete!</h3>
+            <p id="downloadSuccessMessage"></p>
+            <button class="btn-primary" onclick="closeModal()">
+                <i class="fas fa-thumbs-up"></i> Awesome!
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

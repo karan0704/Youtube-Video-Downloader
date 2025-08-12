@@ -1,0 +1,21 @@
+Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+:63342/api/youtube/check-quality:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+also it should show option to download available subtitles
+it should auto detect browser Select your browser to use existing YouTube login
+choose dowload path enable option user should copy paste path
+Video thumbnail showing on 🔞 Age-Restricted Video - Authentication Required
+
+🔐 Selected chrome for authentication
+
+
+✅ Video analysis complete
+
+🔞 Age-restricted video detected. Download may still work with "best" quality.
+
+still not showing option to choose quality and download
+
+also make code loosely couple separate class for different feature
+
+add some other light color 135deg, #3b82f6, #1d4ed8); these color are very dark and not looks good
+
+for modified code write new py script to write code and create files
