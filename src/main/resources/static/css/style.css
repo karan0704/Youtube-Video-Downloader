@@ -1220,3 +1220,252 @@ select {
         font-size: 2rem;
     }
 }
+/* Download Type Selector - NEW */
+.download-type-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    background: var(--secondary-color);
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    flex-wrap: wrap;
+}
+
+.download-type-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 120px;
+}
+
+.download-type-btn.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow);
+}
+
+.download-type-btn:hover:not(.active) {
+    background: var(--hover-color);
+    color: var(--text-primary);
+}
+
+.download-type-btn i {
+    font-size: 1.2rem;
+}
+
+/* Enhanced Subtitle Controls */
+.subtitle-controls {
+    background: var(--secondary-color);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 1.5rem;
+}
+
+.subtitle-controls h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.subtitle-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.btn-select-all,
+.btn-clear-all,
+.btn-download-subs {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: var(--transition);
+}
+
+.btn-select-all {
+    background: var(--accent-color);
+    color: white;
+}
+
+.btn-clear-all {
+    background: var(--error-color);
+    color: white;
+}
+
+.btn-download-subs {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-select-all:hover,
+.btn-clear-all:hover,
+.btn-download-subs:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+/* Selected subtitle counter */
+.subtitle-counter {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Enhanced Subtitle Grid */
+.subtitle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.subtitle-option {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+}
+
+.subtitle-option:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.subtitle-option.selected {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color), var(--success-color));
+    color: white;
+}
+
+.subtitle-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.subtitle-details {
+    flex: 1;
+}
+
+.subtitle-details h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.subtitle-details p {
+    margin: 0;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.subtitle-checkbox {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.subtitle-option.selected .subtitle-checkbox {
+    background: white;
+    border-color: white;
+    color: var(--accent-color);
+}
+
+.subtitle-checkbox i {
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.subtitle-option.selected .subtitle-checkbox i {
+    opacity: 1;
+}
+
+/* Format checkboxes in Advanced tab */
+.format-checkboxes {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.format-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.format-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* No subtitles message */
+.no-subtitles {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+}
+
+.no-subtitles i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+/* Mobile Responsive for new elements */
+@media (max-width: 768px) {
+    .download-type-selector {
+        flex-direction: column;
+    }
+
+    .download-type-btn {
+        min-width: auto;
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .subtitle-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .subtitle-actions {
+        flex-direction: column;
+    }
+
+    .format-checkboxes {
+        flex-direction: column;
+    }
+}

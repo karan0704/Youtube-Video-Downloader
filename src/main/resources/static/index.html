@@ -103,6 +103,25 @@
 
         <!-- Download Options -->
         <section class="options-section hidden" id="optionsSection">
+            <!-- Download Type Selector -->
+            <div class="download-type-selector">
+                <button class="download-type-btn active" data-type="video">
+                    <i class="fas fa-video"></i> Video Only
+                </button>
+                <button class="download-type-btn" data-type="audio">
+                    <i class="fas fa-music"></i> Audio Only
+                </button>
+                <button class="download-type-btn" data-type="subtitles">
+                    <i class="fas fa-closed-captioning"></i> Subtitles Only
+                </button>
+                <button class="download-type-btn" data-type="video+subtitles">
+                    <i class="fas fa-video"></i> Video + Subs
+                </button>
+                <button class="download-type-btn" data-type="audio+subtitles">
+                    <i class="fas fa-music"></i> Audio + Subs
+                </button>
+            </div>
+
             <div class="option-tabs">
                 <button class="tab-btn active" data-tab="video">
                     <i class="fas fa-video"></i> Video
@@ -134,15 +153,21 @@
             <!-- Audio Tab -->
             <div class="tab-content" id="audio-tab">
                 <div class="format-grid">
-                    <div class="format-option" data-format="mp3">
+                    <div class="format-option" data-format="mp3" onclick="selectAudioFormat('mp3', this)">
                         <i class="fas fa-music"></i>
                         <h4>MP3</h4>
                         <p>320kbps Audio</p>
+                        <button class="download-btn" onclick="downloadAudioOnly('mp3')">
+                            <i class="fas fa-download"></i> Download
+                        </button>
                     </div>
-                    <div class="format-option" data-format="m4a">
+                    <div class="format-option" data-format="m4a" onclick="selectAudioFormat('m4a', this)">
                         <i class="fas fa-file-audio"></i>
                         <h4>M4A</h4>
                         <p>Best Quality</p>
+                        <button class="download-btn" onclick="downloadAudioOnly('m4a')">
+                            <i class="fas fa-download"></i> Download
+                        </button>
                     </div>
                 </div>
             </div>
@@ -177,6 +202,21 @@
                             <option value="id">Video ID</option>
                             <option value="custom">Custom Format</option>
                         </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="subtitleFormats">Subtitle Formats:</label>
+                        <div class="format-checkboxes">
+                            <label class="format-checkbox">
+                                <input type="checkbox" value="srt" checked> SRT
+                            </label>
+                            <label class="format-checkbox">
+                                <input type="checkbox" value="vtt"> VTT
+                            </label>
+                            <label class="format-checkbox">
+                                <input type="checkbox" value="ass"> ASS
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -244,13 +284,7 @@
     </div>
 </div>
 
-<!-- Scripts
-<script src="js/api.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/events.js"></script>
-<script src="js/app.js"></script>-->
 <!-- Scripts -->
 <script src="script.js"></script>
-
 </body>
 </html>
